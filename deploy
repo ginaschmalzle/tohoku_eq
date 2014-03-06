@@ -1,0 +1,19 @@
+#!/bin/bash
+
+deploy=yes  # Either yes or no, No removes directory contents
+dir='/Library/WebServer/Documents'
+projname='eq'
+if [ $deploy = 'yes' ] 
+then 
+  sudo apachectl start
+  mkdir ${dir}/${projname} 
+  cp -R  * ${dir}/${projname}/
+#  chmod -R +x ${dir}/${projname}/leaflet
+#  chmod -R +x ${dir}/${projname}/data
+else
+  sudo apachectl end
+  rm -r  ${dir}/${projname}
+fi
+
+
+
