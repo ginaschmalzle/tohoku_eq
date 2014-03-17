@@ -8,6 +8,9 @@ var earthquakes = [];
 var width,height,canvas,c;
 var needsUpdate = true;
 
+
+
+
 // Draw canvas background
 
 var drawBackground = function() {
@@ -32,6 +35,7 @@ var drawCountryLines = function(data,path){
 
 }
 
+
 // Filter data by given time
 
 var filterData = function(data,minute){
@@ -44,6 +48,9 @@ var filterData = function(data,minute){
 
 	return filteredData;
 }
+
+
+
 
 // Earthquake constructor
 
@@ -168,6 +175,13 @@ var initMap = function(data){
 
 	path = d3.geo.path().projection(projection).context(c);
 	
+
+
+
+ 	canvas.onclick = function(e){
+   		transect(e, data, path);
+  	};
+
 	startMinute = Math.floor(minSec/60)-1;
 	minute = startMinute;
 	
@@ -277,6 +291,71 @@ var handlePlayhead = function(){
 }
 
 
+
+
+function transect(e, data, path) {
+
+	var mapclick = {
+    startLatlng: null,
+    endLatlng: null,
+    currentLine: null,
+    allArray: []
+	};
+
+	
+    if (mapclick.currentLine) {
+        c.removeLayer(mapclick.currentLine);
+        c.removeLayer(mapclick.startLatlng1);
+        c.removeLayer(mapclick.startLatlng2);
+        mapclick.startLatlng = null;
+        mapclick.endLatlng = null;
+        mapclick.currentLine = null;
+        mapclick.startLatlng1 = null;
+        mapclick.startLatlng2 = null;
+        $(mapclick.allArray).each(function () {
+            c.removeLayer(this);
+        });
+    }
+    /*if (mapclick.endLatlng === null && mapclick.startLatlng !== null) {
+		mapclick.startLatlng = 1;
+		c.beginPath();	
+		c.arc(e.latlng , 5, 0, 2 * Math.PI, false);
+		c.strokeStyle = "black";
+		c.fillStyle = "black";
+		c.fill();
+		c.closePath();
+		c.stroke();
+		c.save();
+		console.log("Click 2")
+		//c.restore();
+		}
+
+    else */if (mapclick.startLatlng === null && mapclick.endLatlng === null) {
+        	
+
+			c.beginPath();	
+			c.arc(0, 0, 10000, 0, 2 * Math.PI, false);
+			c.strokeStyle = "white";
+			c.stroke();
+			c.fillStyle = "white";
+			c.fill();
+			c.save();
+			c.globalAlpha = 1;
+			c.closePath();
+			console.log("Click 1");
+			mapclick.currentLine = [0,0];
+        /*mapclick.currentLine = L.polyline([
+            [mapclick.startLatlng.lat, mapclick.startLatlng.lng],
+            [mapclick.endLatlng.lat, mapclick.endLatlng.lng]
+        ], {
+            color: 'green',
+            weight: 5
+        }).addTo(c);*/
+    }
+   }; 
+
+
+
 window.onload = function(){
 
 d3.json("topojapan.json",function(data){
@@ -296,6 +375,6 @@ d3.json("tohoku.json",function(data){
 }
 
 var isReady = function(){
-	
+
 	return dataset.countries && dataset.earthquakes;
 }
