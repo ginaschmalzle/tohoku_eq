@@ -19,6 +19,20 @@ body {
 
 }
 
+
+#mySVG {
+
+	float: right;
+
+}
+#mySVG2 {
+	position:relative;
+	float: right;
+	top:-400px;
+	
+
+}
+
 #time {
 	margin-top: 10px;
 }
@@ -38,6 +52,8 @@ h1 {
 	padding: 0;
 
 }
+
+
 
 #playbtn {
 	width: 100px;

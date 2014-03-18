@@ -12,6 +12,12 @@ var startY=null;
 var endX=null;
 var endY=null;
 
+var top_pad = 20;
+var left_pad = 100;
+var xscale;
+var yscale;
+var x2scale;
+var y2scale;
 
 // Draw canvas background
 
@@ -32,11 +38,10 @@ var loadMap = function () {
 
 }
 
-
-
 var reDraw = function (data,path) {
 
-	width = window.innerWidth;
+	//width = window.innerWidth;
+	width = (window.innerWidth)/2;
 	height = window.innerHeight;
 	canvas = document.getElementById("myCanvas");
 
@@ -45,7 +50,7 @@ var reDraw = function (data,path) {
 
 	c = canvas.getContext("2d");
 
-	projection = d3.geo.mercator().scale(2000).center([139.6917,35.689506]).translate([width/2,height/2]); // center on tokyo
+	projection = d3.geo.mercator().scale(2000).center([140.6917,35.689506]).translate([width/2,height/2]); // center on tokyo
 
 	path = d3.geo.path().projection(projection).context(c);
 	drawBackground();
@@ -152,6 +157,7 @@ var filterData = function(data,minute){
 
 // Earthquake constructor
 
+
 var Earthquake = function(x,y,color,magnitude,depth,minute){
 	this.x = x;
 	this.y = y;
@@ -193,6 +199,203 @@ var updateEarthquakes = function(data){
 
 }
 
+
+var updateEarthquakesTable = function(data){
+
+	var colorScale = d3.scale.linear();
+	colorScale.domain([0,50]);
+	colorScale.range([100,0]); // green to red (deepest)
+	colorScale.clamp(true);
+	
+	var colorScale2 = d3.scale.linear();
+	colorScale2.domain([0,1440]);
+	colorScale2.range([0,100]); // green to red (deepest)
+	colorScale2.clamp(true);
+
+
+	for(var i = 0; i < data.length; i++){
+
+		var d = data[i].properties.Depth;
+		var m = data[i].properties.Magnitude;
+		var minute = Math.floor(data[i].properties.Time/60);
+
+
+	
+		var hueValue = colorScale(d);
+		var color = d3.hsl(hueValue,1,0.5);
+
+		var hueValue2 = colorScale2(minute);
+		var color2 = d3.hsl(hueValue2,1,0.5);
+
+		addPoint(color,m,minute);
+		addPoint2(color2,d,minute,m);
+	}
+
+
+}
+
+var RemovePoint = function (minute) {
+	hour = minute/60;
+	var circles = $("#mySVG>circle");
+		for(var i = 0; i < circles.length; i++){
+			console.log(circles[i].getAttribute("cx"));
+			if (circles[i].getAttribute("cx") > xscale(hour))
+				circles[i].parentNode.removeChild(circles[i]);
+		}
+
+}
+
+var addPoint = function (color,m,minute) {
+
+	//console.log(minute, minute/60,m);
+	var svg = d3.select("#mySVG");
+
+		//svg.save();
+		svg.append("circle")
+			.attr("cx", xscale(minute/60))
+			.attr("cy", yscale(parseFloat(m)))
+			.attr("fill", color)
+			.attr("r",5);
+		
+}
+
+
+var RemovePoint2 = function (minute) {
+	hour = minute/60;
+	var circles = $("#mySVG2>circle");
+		for(var i = 0; i < circles.length; i++){
+			console.log(circles[i].getAttribute("cx"));
+			if (circles[i].getAttribute("cx") > x2scale(hour))
+				circles[i].parentNode.removeChild(circles[i]);
+		}
+
+}
+
+var addPoint2 = function (color,d,minute,m) {
+
+	console.log(minute, minute/60,d);
+	var svg2 = d3.select("#mySVG2");
+
+		//svg.save();
+		svg2.append("circle")
+			//.attr("cx", x2scale(minute/60))
+			.attr("cx", x2scale(m))
+			.attr("cy", y2scale(parseFloat(d)))
+			.attr("fill", color)
+			.attr("r",5);
+		
+}
+
+
+var plotMagvTime = function(data){
+	// Draw Mag v Time plot
+	//console.log("Hello World");
+	var plotw = 800;
+	var ploth = 300;
+
+
+	var svg = d3.select("#mySVG")
+		.attr("width", plotw)
+		.attr("height", ploth);
+
+	//console.log (data);
+
+	//for(var i = 0; i < data.length; i++ ){
+
+		console.log("svg =", svg);
+		xscale = d3.scale.linear().domain([0,24]).range([left_pad,plotw-top_pad]);
+		yscale = d3.scale.linear().domain([10,3]).range([top_pad, ploth-top_pad*2]);
+		var xAxis = d3.svg.axis().scale(xscale).orient("bottom")
+			.ticks(10);
+
+		var yAxis = d3.svg.axis().scale(yscale).orient("left");
+
+		svg.append("text")
+    		.attr("x", plotw/1.8 )
+    		.attr("y", ploth - top_pad+15 )
+    		.style("text-anchor","middle")
+			.text("Time referenced to UTC, March 11, 2011 (hours of day)");
+
+		svg.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0, "+(ploth-2*top_pad)+")")
+			.call(xAxis);
+
+		svg.append("text")
+			.attr("transform", "rotate(-90)")
+			.attr("y", ploth/5.5)
+			.attr("x",-left_pad*1.2)
+			.attr("dy", "1em")
+			.style("text-anchor","middle")
+			.text("Magnitude");
+
+		svg.append("g")
+			.attr("class", "y axis")
+			.attr("transform", "translate("+(left_pad)+",0)")
+			.call(yAxis);
+
+
+
+	//}
+}
+
+
+var plotDepthvTime = function(data){
+	// Draw Mag v Time plot
+	//console.log("Hello World");
+	var plotw = 800;
+	var ploth = 300;
+
+	var svg2 = d3.select("#mySVG2")
+		.attr("width", plotw)
+		.attr("height", ploth);
+
+	console.log ("svg2 =", svg2);
+
+	//for(var i = 0; i < data.length; i++ ){
+
+
+		x2scale = d3.scale.linear().domain([10,3]).range([left_pad,plotw-top_pad]);
+		y2scale = d3.scale.linear().domain([100,3]).range([top_pad, ploth-top_pad*2]);
+		
+
+		console.log(x2scale);
+
+		var x2Axis = d3.svg.axis().scale(x2scale).orient("bottom")
+			.ticks(10);
+
+		var y2Axis = d3.svg.axis().scale(y2scale).orient("left");
+
+		svg2.append("text")
+    		.attr("x", plotw/1.8 )
+    		.attr("y", ploth - top_pad+15 )
+    		.style("text-anchor","middle")
+			//.text("Time referenced to UTC, March 11, 2011 (hours of day)");
+			.text("Magnitude");
+		svg2.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0, "+(ploth-2*top_pad)+")")
+			.call(x2Axis);
+
+		svg2.append("text")
+			.attr("transform", "rotate(-90)")
+			.attr("y", ploth/5.5)
+			.attr("x",-left_pad*1.2)
+			.attr("dy", "1em")
+			.style("text-anchor","middle")
+			.text("Depth (km)");
+
+		svg2.append("g")
+			.attr("class", "y axis")
+			.attr("transform", "translate("+(left_pad)+",0)")
+			.call(y2Axis);
+
+
+
+	//}
+}
+
+
 var drawEarthquakes = function(){
 
 	var trash = [];
@@ -216,6 +419,9 @@ var drawEarthquakes = function(){
 
 	}
 
+
+
+// Draw earthquakes to Map
 	for(var i = 0; i < earthquakes.length; i++ ){
 
 		var eq = earthquakes[i];
@@ -263,9 +469,12 @@ var initMap = function(data){
 		return d.properties.Time;
 	});
 	
-	projection = d3.geo.mercator().scale(2000).center([139.6917,35.689506]).translate([width/2,height/2]); // center on tokyo
+	projection = d3.geo.mercator().scale(2000).center([140.6917,35.689506]).translate([width/2,height/2]); // center on tokyo
 
 	path = d3.geo.path().projection(projection).context(c);
+
+	plotMagvTime(filterData(data.earthquakes, minute));
+	plotDepthvTime(filterData(data.earthquakes, minute));
 
 	canvas.onclick = function(e, data){
    		drawUserDot(e,data);
@@ -279,8 +488,9 @@ var initMap = function(data){
 	setSlider();
 	setButton();
 	
+
 	animate(c,projection,path,data);
-	console.log("Hello World");
+
 	
 }
 
@@ -297,6 +507,7 @@ var setSlider = function(){
 		isPlaying = false;
 		needsUpdate = true;
 		minute = parseInt(this.value);
+		RemovePoint(minute);
 		
 	}
 
@@ -342,13 +553,14 @@ var animate = function(c,projection,path,data){
 		// don't update unless something has changed
 		
 		if(needsUpdate){
-			console.log("hi");
+			//console.log("hi");
 
 		c.clearRect(0,0,window.innerWidth,window.innerHeight);
 
 		drawBackground();
 		drawCountryLines(data.countries,path);
 		updateEarthquakes(filterData(data.earthquakes,minute));
+		updateEarthquakesTable(filterData(data.earthquakes,minute));
 		drawEarthquakes();
 		updateTime();
 		handlePlayhead();
@@ -356,6 +568,9 @@ var animate = function(c,projection,path,data){
 		  		drawDot(startX,startY);
 		  		drawDot(endX,endY);
 		  		drawLine(startX,startY,endX,endY);
+		  	}
+		  	else if (startX === null) {
+
 		  	}
 		  	else {
 		  		drawDot(startX,startY);
@@ -387,6 +602,7 @@ var handlePlayhead = function(){
 			needsUpdate = false;
 
 		}
+
 
 }
 
