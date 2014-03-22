@@ -41,9 +41,10 @@ var loadMap = function () {
 var reDraw = function (data,path) {
 
 	//width = window.innerWidth;
-	width = (window.innerWidth)/2;
+	width = (window.innerWidth)/3;
 	height = window.innerHeight;
 	canvas = document.getElementById("myCanvas");
+	form = document.getElementById("table");
 
 	canvas.width = width;
 	canvas.height = height;
@@ -55,6 +56,7 @@ var reDraw = function (data,path) {
 	path = d3.geo.path().projection(projection).context(c);
 	drawBackground();
 	drawCountryLines(data.countries, path);
+
 
 };
 
@@ -107,7 +109,7 @@ var drawLine = function (startX,startY,endX,endY){
 var drawUserDot = function(e, data){
 	if(startX === null && endX === null) {
 		
-		console.log(e.clientX, e.clientY);
+	//	console.log(e.clientX, e.clientY);
 		startX=e.clientX;
 		startY=e.clientY;
 		drawDot(startX,startY);
@@ -118,7 +120,7 @@ var drawUserDot = function(e, data){
 	// Draw 2nd Dot
 		endX=e.clientX;
 		endY=e.clientY;
-		console.log(startX, startY, endX, endY);
+	//	console.log(startX, startY, endX, endY);
 		drawDot(endX,endY);
 		drawLine(startX,startY,endX,endY);
 	}
@@ -130,11 +132,11 @@ var drawUserDot = function(e, data){
 		startX=e.clientX;
 		startY=e.clientY;
 		drawDot(startX, startY);
-		console.log(startX,startY,endX,endY);	
+	//	console.log(startX,startY,endX,endY);	
 		endX=null;
 		endY=null;
 
-		console.log("Jackpot");	
+	//	console.log("Jackpot");	
 	}
 
 };
@@ -172,7 +174,7 @@ var updateEarthquakes = function(data){
 
 	var colorScale = d3.scale.linear();
 	colorScale.domain([0,50]);
-	colorScale.range([100,0]); // green to red (deepest)
+	colorScale.range([0,100]); // green to red (deepest)
 	colorScale.clamp(true);
 	
 	var magScale = d3.scale.log();
@@ -203,13 +205,13 @@ var updateEarthquakes = function(data){
 var updateEarthquakesTable = function(data){
 
 	var colorScale = d3.scale.linear();
-	colorScale.domain([0,50]);
+	colorScale.domain([50,0]);
 	colorScale.range([100,0]); // green to red (deepest)
 	colorScale.clamp(true);
 	
 	var colorScale2 = d3.scale.linear();
-	colorScale2.domain([0,1440]);
-	colorScale2.range([0,100]); // green to red (deepest)
+	colorScale2.domain([1440,0]);
+	colorScale2.range([100,0]); // green to red (deepest)
 	colorScale2.clamp(true);
 
 
@@ -227,74 +229,72 @@ var updateEarthquakesTable = function(data){
 		var hueValue2 = colorScale2(minute);
 		var color2 = d3.hsl(hueValue2,1,0.5);
 
-		addPoint(color,m,minute);
-		addPoint2(color2,d,minute,m);
+		addPoint(color,m,minute,"#mySVG");
+		addPoint(color,m,minute,"#mySVG2");
 	}
 
 
 }
 
-var RemovePoint = function (minute) {
-	hour = minute/60;
-	var circles = $("#mySVG>circle");
-		for(var i = 0; i < circles.length; i++){
-			console.log(circles[i].getAttribute("cx"));
-			if (circles[i].getAttribute("cx") > xscale(hour))
-				circles[i].parentNode.removeChild(circles[i]);
-		}
 
-}
-
-var addPoint = function (color,m,minute) {
+var addPoint = function (color,m,minute,selector) {
 
 	//console.log(minute, minute/60,m);
-	var svg = d3.select("#mySVG");
+
+	var svg = d3.select(selector);
 
 		//svg.save();
+	if(selector === "#mySVG"){
 		svg.append("circle")
 			.attr("cx", xscale(minute/60))
 			.attr("cy", yscale(parseFloat(m)))
 			.attr("fill", color)
 			.attr("r",5);
+	}
+	else {
+			svg.append("circle")
+			.attr("cx", x2scale(minute/60))
+			.attr("cy", y2scale(parseFloat(m)))
+			.attr("fill", color)
+			.attr("r",5);	
+	}
 		
 }
 
 
-var RemovePoint2 = function (minute) {
+var RemovePoint = function (minute, selector) {
+	console.log(selector)
 	hour = minute/60;
-	var circles = $("#mySVG2>circle");
+	var circles = $(selector);
+
+	if (selector === "#mySVG>circle") {
 		for(var i = 0; i < circles.length; i++){
-			console.log(circles[i].getAttribute("cx"));
+			//console.log(circles[i].getAttribute("cx"));
+			if (circles[i].getAttribute("cx") > xscale(hour))
+				circles[i].parentNode.removeChild(circles[i]);
+		}
+	}
+	else 
+	{
+		for(var i = 0; i < circles.length; i++){
+			//console.log(circles[i].getAttribute("cx"));
 			if (circles[i].getAttribute("cx") > x2scale(hour))
 				circles[i].parentNode.removeChild(circles[i]);
 		}
-
-}
-
-var addPoint2 = function (color,d,minute,m) {
-
-	console.log(minute, minute/60,d);
-	var svg2 = d3.select("#mySVG2");
-
-		//svg.save();
-		svg2.append("circle")
-			//.attr("cx", x2scale(minute/60))
-			.attr("cx", x2scale(m))
-			.attr("cy", y2scale(parseFloat(d)))
-			.attr("fill", color)
-			.attr("r",5);
-		
+	} 
 }
 
 
-var plotMagvTime = function(data){
+
+
+var plotGraphDots = function(data){
 	// Draw Mag v Time plot
 	//console.log("Hello World");
-	var plotw = 800;
+	var plotw = 600;
 	var ploth = 300;
 
 
-	var svg = d3.select("#mySVG")
+	var svg = d3.select(selector)
 		.attr("width", plotw)
 		.attr("height", ploth);
 
@@ -302,13 +302,26 @@ var plotMagvTime = function(data){
 
 	//for(var i = 0; i < data.length; i++ ){
 
-		console.log("svg =", svg);
-		xscale = d3.scale.linear().domain([0,24]).range([left_pad,plotw-top_pad]);
-		yscale = d3.scale.linear().domain([10,3]).range([top_pad, ploth-top_pad*2]);
-		var xAxis = d3.svg.axis().scale(xscale).orient("bottom")
-			.ticks(10);
+		console.log(selector);
 
-		var yAxis = d3.svg.axis().scale(yscale).orient("left");
+		if (selector === '#mySVG'){
+			xscale = d3.scale.linear().domain([0,24]).range([left_pad,plotw-top_pad]);
+			yscale = d3.scale.linear().domain([10,3]).range([top_pad, ploth-top_pad*2]);
+
+			var xAxis = d3.svg.axis().scale(xscale).orient("bottom")
+				.ticks(10);
+
+			var yAxis = d3.svg.axis().scale(yscale).orient("left");
+		}
+
+		else {
+			x2scale = d3.scale.linear().domain([5,10]).range([left_pad,plotw-top_pad]);
+            y2scale = d3.scale.linear().domain([8,4]).range([top_pad, ploth-top_pad*2]);
+            var xAxis = d3.svg.axis().scale(x2scale).orient("bottom")
+				.ticks(10);
+
+			var yAxis = d3.svg.axis().scale(y2scale).orient("left");	
+		}
 
 		svg.append("text")
     		.attr("x", plotw/1.8 )
@@ -333,67 +346,13 @@ var plotMagvTime = function(data){
 			.attr("class", "y axis")
 			.attr("transform", "translate("+(left_pad)+",0)")
 			.call(yAxis);
-
-
-
-	//}
-}
-
-
-var plotDepthvTime = function(data){
-	// Draw Mag v Time plot
-	//console.log("Hello World");
-	var plotw = 800;
-	var ploth = 300;
-
-	var svg2 = d3.select("#mySVG2")
-		.attr("width", plotw)
-		.attr("height", ploth);
-
-	console.log ("svg2 =", svg2);
-
-	//for(var i = 0; i < data.length; i++ ){
-
-
-		x2scale = d3.scale.linear().domain([10,3]).range([left_pad,plotw-top_pad]);
-		y2scale = d3.scale.linear().domain([100,3]).range([top_pad, ploth-top_pad*2]);
 		
 
-		console.log(x2scale);
-
-		var x2Axis = d3.svg.axis().scale(x2scale).orient("bottom")
-			.ticks(10);
-
-		var y2Axis = d3.svg.axis().scale(y2scale).orient("left");
-
-		svg2.append("text")
-    		.attr("x", plotw/1.8 )
-    		.attr("y", ploth - top_pad+15 )
-    		.style("text-anchor","middle")
-			//.text("Time referenced to UTC, March 11, 2011 (hours of day)");
-			.text("Magnitude");
-		svg2.append("g")
-			.attr("class", "x axis")
-			.attr("transform", "translate(0, "+(ploth-2*top_pad)+")")
-			.call(x2Axis);
-
-		svg2.append("text")
-			.attr("transform", "rotate(-90)")
-			.attr("y", ploth/5.5)
-			.attr("x",-left_pad*1.2)
-			.attr("dy", "1em")
-			.style("text-anchor","middle")
-			.text("Depth (km)");
-
-		svg2.append("g")
-			.attr("class", "y axis")
-			.attr("transform", "translate("+(left_pad)+",0)")
-			.call(y2Axis);
-
-
-
 	//}
 }
+
+
+
 
 
 var drawEarthquakes = function(){
@@ -449,9 +408,32 @@ var drawEarthquakes = function(){
 }
 
 
+
+var colorBar = function() {
+	c.font="18px Georgia";
+	c.fillText("Depth (km)",20,15);
+	c.fillText("0",45,30);
+	var barheight = 200;
+	c.fillText("25",45,20+(barheight/2));
+	c.fillText("50",45,20+barheight);
+
+	var my_gradient=c.createLinearGradient(0,0,0,200);
+	var maxHue = 100;
+	var minHue = 0;
+	for(var i = 0; i < 10; i++){
+		var step = i/10;
+		var thisHue = maxHue*step;
+		my_gradient.addColorStop(step,"hsl("+thisHue+",100%,50%)");
+		}
+		c.fillStyle=my_gradient;
+		c.fillRect(20,20,25,barheight);
+}
+
 var initMap = function(data){
 
 	reDraw(data);
+	colorBar();
+
 
 	minMag = d3.min(data.earthquakes, function(d){
 		return d.properties.Magnitude;
@@ -473,13 +455,41 @@ var initMap = function(data){
 
 	path = d3.geo.path().projection(projection).context(c);
 
-	plotMagvTime(filterData(data.earthquakes, minute));
-	plotDepthvTime(filterData(data.earthquakes, minute));
+	//console.log(document.getElementById('r1'));
 
-	canvas.onclick = function(e, data){
-   		drawUserDot(e,data);
-   		return e, data;
+
+	selector = '#mySVG';
+	plotGraphDots(filterData(data.earthquakes, minute, selector));
+	selector = '#mySVG2';
+	plotGraphDots(filterData(data.earthquakes, minute, selector));
+
+	//plotDepthvTime(filterData(data.earthquakes, minute));
+
+
+	radio1 = document.getElementById('r1');
+	radio2 = document.getElementById('r2');
+
+
+	form.onclick = function(data, minute){
+
+		if (document.getElementById('r1').checked) {
+			plotMagvTime(filterData(data.earthquakes, minute));
+			plotDepthvTime(filterData(data.earthquakes, minute));
+		}
+
+		else { 
+			//alert("Click two points on the map to define a profile, then press play!");
+			//	console.log ("Hi!");
+			window.open('http://geodesygina.com/',"_self");
+			table.onclick = function(e, data){
+   				drawUserDot(e,data);
+   				return e, data;
+			};
+		}
 	};
+
+
+
 
  	
 	startMinute = Math.floor(minSec/60)-1;
@@ -507,8 +517,11 @@ var setSlider = function(){
 		isPlaying = false;
 		needsUpdate = true;
 		minute = parseInt(this.value);
-		RemovePoint(minute);
-		
+
+		selector = "#mySVG>circle";
+		RemovePoint(minute, selector);
+		selector = "#mySVG2>circle";
+		RemovePoint(minute, selector);
 	}
 
 }
@@ -559,6 +572,7 @@ var animate = function(c,projection,path,data){
 
 		drawBackground();
 		drawCountryLines(data.countries,path);
+		colorBar();
 		updateEarthquakes(filterData(data.earthquakes,minute));
 		updateEarthquakesTable(filterData(data.earthquakes,minute));
 		drawEarthquakes();
