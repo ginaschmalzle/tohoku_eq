@@ -1,5 +1,5 @@
 // global variables
-
+//*******************************************
 var dataset = {};
 var dataLength = 1;
 var minute;
@@ -19,9 +19,50 @@ var yscale;
 var x2scale;
 var y2scale;
 
-// Draw canvas background
+var x2min = 5;
+var x2max = 10;
+var y2min = 4;
+var y2max = 8;
 
-var loadMap = function () {
+// 0: for time vs. magnetude graphs
+// 1: for depth vs. distance 
+var state = 0;
+
+
+// Radio Buttons
+// The radio buttons 
+// determine the 'state' of the graphs -- i.e., different plots 
+// are displayed depending on if you choose one radio button or the
+// other
+
+var createRadioButtons = function(){
+	radio1 = document.getElementById('r1');
+	radio2 = document.getElementById('r2');
+
+
+	form.onclick = function(data, minute){
+
+		if (document.getElementById('r1').checked) {
+			state = 0;
+		}
+		else {
+			state = 1;
+		}
+
+		drawGraph();
+	};
+}
+
+
+
+
+// Function for drawing Canvas basemap
+//*******************************************
+
+
+// Load in Data Sets
+
+var loadData = function () {
 	d3.json("topojapan.json",function(data){
 		
 		dataset.countries = data;
@@ -34,10 +75,13 @@ var loadMap = function () {
 		dataset.earthquakes = data;
 		if(isReady()) initMap(dataset);
 
+
 	});
 
 }
 
+
+//This function draws and redraws the canvas map with background and country lines
 var reDraw = function (data,path) {
 
 	//width = window.innerWidth;
@@ -51,7 +95,7 @@ var reDraw = function (data,path) {
 
 	c = canvas.getContext("2d");
 
-	projection = d3.geo.mercator().scale(2000).center([140.6917,35.689506]).translate([width/2,height/2]); // center on tokyo
+	projection = d3.geo.mercator().scale(1000).center([140.6917,35.689506]).translate([width/2,(height/2)-28]); // center on tokyo
 
 	path = d3.geo.path().projection(projection).context(c);
 	drawBackground();
@@ -60,6 +104,7 @@ var reDraw = function (data,path) {
 
 };
 
+// Defines Background look
 var drawBackground = function() {
 	c.beginPath();
 	c.fillStyle = "rgba(28,107,160,1)";
@@ -69,9 +114,8 @@ var drawBackground = function() {
 	c.closePath();
 }
 
+// Draws country lines
 var drawCountryLines = function(data,path){
-
-
   	c.beginPath();
     path(topojson.mesh(data, data.objects.japan));
   	c.strokeStyle = 'rgba(0,0,0,0.6)';	
@@ -81,334 +125,9 @@ var drawCountryLines = function(data,path){
 	c.closePath();
   	c.stroke();
   	c.restore();
-
 }
 
-var drawDot = function (dotx,doty) {
-	//console.log(e.clientX, e.clientY);
-	c.beginPath();	
-	c.arc(dotx, doty, 10, 0, 2 * Math.PI, false);
-	c.strokeStyle = "red";
-	c.fillStyle = "red";
-	c.fill();
-	c.stroke();
-	c.restore();
-	c.closePath();
-}
-
-
-var drawLine = function (startX,startY,endX,endY){
-		//Draw line
-		c.moveTo(startX,startY);
-		c.lineTo(endX, endY);
-		c.strokeStyle = "red";
-		c.lineWidth = 3;
-		c.stroke();
-}
-
-var drawUserDot = function(e, data){
-	if(startX === null && endX === null) {
-		
-	//	console.log(e.clientX, e.clientY);
-		startX=e.clientX;
-		startY=e.clientY;
-		drawDot(startX,startY);
-
-	}
-	else if (startX !== null && endX === null) {
-		
-	// Draw 2nd Dot
-		endX=e.clientX;
-		endY=e.clientY;
-	//	console.log(startX, startY, endX, endY);
-		drawDot(endX,endY);
-		drawLine(startX,startY,endX,endY);
-	}
-	else {
-	
-	// Clear start and end points
-		
-		reDraw(dataset);
-		startX=e.clientX;
-		startY=e.clientY;
-		drawDot(startX, startY);
-	//	console.log(startX,startY,endX,endY);	
-		endX=null;
-		endY=null;
-
-	//	console.log("Jackpot");	
-	}
-
-};
-
-// Filter data by given time
-
-var filterData = function(data,minute){
-
-	var filteredData = data.filter(function(item,index,array){
-
-		return Math.floor(item.properties.Time/60) === minute; 
-	
-	});
-
-	return filteredData;
-}
-
-
-
-
-// Earthquake constructor
-
-
-var Earthquake = function(x,y,color,magnitude,depth,minute){
-	this.x = x;
-	this.y = y;
-	this.color = color;
-	this.magnitude = magnitude;
-	this.depth = depth;
-	this.opacity = 1;
-	this.minute = minute;
-}
-
-var updateEarthquakes = function(data){
-
-	var colorScale = d3.scale.linear();
-	colorScale.domain([0,50]);
-	colorScale.range([0,100]); // green to red (deepest)
-	colorScale.clamp(true);
-	
-	var magScale = d3.scale.log();
-	magScale.base(10);
-	magScale.domain([minMag,maxMag]);
-	magScale.range([1,30]);
-
-	for(var i = 0; i < data.length; i++){
-
-		var d = data[i].properties.Depth;
-		var m = data[i].properties.Magnitude;
-		var minute = Math.floor(data[i].properties.Time/60);
-
-		var x = projection(data[i].geometry.coordinates)[0];
-		var y = projection(data[i].geometry.coordinates)[1];
-	
-		var hueValue = colorScale(d);
-		var color = d3.hsl(hueValue,1,0.5);
-
-		earthquakes.push(new Earthquake(x,y,color.toString(),magScale(m)*2,d,minute));
-		
-	}
-
-
-}
-
-
-var updateEarthquakesTable = function(data){
-
-	var colorScale = d3.scale.linear();
-	colorScale.domain([50,0]);
-	colorScale.range([100,0]); // green to red (deepest)
-	colorScale.clamp(true);
-	
-	var colorScale2 = d3.scale.linear();
-	colorScale2.domain([1440,0]);
-	colorScale2.range([100,0]); // green to red (deepest)
-	colorScale2.clamp(true);
-
-
-	for(var i = 0; i < data.length; i++){
-
-		var d = data[i].properties.Depth;
-		var m = data[i].properties.Magnitude;
-		var minute = Math.floor(data[i].properties.Time/60);
-
-
-	
-		var hueValue = colorScale(d);
-		var color = d3.hsl(hueValue,1,0.5);
-
-		var hueValue2 = colorScale2(minute);
-		var color2 = d3.hsl(hueValue2,1,0.5);
-
-		addPoint(color,m,minute,"#mySVG");
-		addPoint(color,m,minute,"#mySVG2");
-	}
-
-
-}
-
-
-var addPoint = function (color,m,minute,selector) {
-
-	//console.log(minute, minute/60,m);
-
-	var svg = d3.select(selector);
-
-		//svg.save();
-	if(selector === "#mySVG"){
-		svg.append("circle")
-			.attr("cx", xscale(minute/60))
-			.attr("cy", yscale(parseFloat(m)))
-			.attr("fill", color)
-			.attr("r",5);
-	}
-	else {
-			svg.append("circle")
-			.attr("cx", x2scale(minute/60))
-			.attr("cy", y2scale(parseFloat(m)))
-			.attr("fill", color)
-			.attr("r",5);	
-	}
-		
-}
-
-
-var RemovePoint = function (minute, selector) {
-	console.log(selector)
-	hour = minute/60;
-	var circles = $(selector);
-
-	if (selector === "#mySVG>circle") {
-		for(var i = 0; i < circles.length; i++){
-			//console.log(circles[i].getAttribute("cx"));
-			if (circles[i].getAttribute("cx") > xscale(hour))
-				circles[i].parentNode.removeChild(circles[i]);
-		}
-	}
-	else 
-	{
-		for(var i = 0; i < circles.length; i++){
-			//console.log(circles[i].getAttribute("cx"));
-			if (circles[i].getAttribute("cx") > x2scale(hour))
-				circles[i].parentNode.removeChild(circles[i]);
-		}
-	} 
-}
-
-
-
-
-var plotGraphDots = function(data){
-	// Draw Mag v Time plot
-	//console.log("Hello World");
-	var plotw = 600;
-	var ploth = 300;
-
-
-	var svg = d3.select(selector)
-		.attr("width", plotw)
-		.attr("height", ploth);
-
-	//console.log (data);
-
-	//for(var i = 0; i < data.length; i++ ){
-
-		console.log(selector);
-
-		if (selector === '#mySVG'){
-			xscale = d3.scale.linear().domain([0,24]).range([left_pad,plotw-top_pad]);
-			yscale = d3.scale.linear().domain([10,3]).range([top_pad, ploth-top_pad*2]);
-
-			var xAxis = d3.svg.axis().scale(xscale).orient("bottom")
-				.ticks(10);
-
-			var yAxis = d3.svg.axis().scale(yscale).orient("left");
-		}
-
-		else {
-			x2scale = d3.scale.linear().domain([5,10]).range([left_pad,plotw-top_pad]);
-            y2scale = d3.scale.linear().domain([8,4]).range([top_pad, ploth-top_pad*2]);
-            var xAxis = d3.svg.axis().scale(x2scale).orient("bottom")
-				.ticks(10);
-
-			var yAxis = d3.svg.axis().scale(y2scale).orient("left");	
-		}
-
-		svg.append("text")
-    		.attr("x", plotw/1.8 )
-    		.attr("y", ploth - top_pad+15 )
-    		.style("text-anchor","middle")
-			.text("Time referenced to UTC, March 11, 2011 (hours of day)");
-
-		svg.append("g")
-			.attr("class", "x axis")
-			.attr("transform", "translate(0, "+(ploth-2*top_pad)+")")
-			.call(xAxis);
-
-		svg.append("text")
-			.attr("transform", "rotate(-90)")
-			.attr("y", ploth/5.5)
-			.attr("x",-left_pad*1.2)
-			.attr("dy", "1em")
-			.style("text-anchor","middle")
-			.text("Magnitude");
-
-		svg.append("g")
-			.attr("class", "y axis")
-			.attr("transform", "translate("+(left_pad)+",0)")
-			.call(yAxis);
-		
-
-	//}
-}
-
-
-
-
-
-var drawEarthquakes = function(){
-
-	var trash = [];
-
-	var handleGarbage = function(eq){
-
-		if(isPlaying){
-			eq.opacity = eq.opacity * 0.95;
-			eq.magnitude = eq.magnitude * 0.99;
-		
-		if(eq.opacity < 0.01){
-			trash.push(i);
-		}
-
-		}
-		else{
-			if(Math.abs(eq.minute-minute) > 50){
-				trash.push(i);
-			}
-		}
-
-	}
-
-
-
-// Draw earthquakes to Map
-	for(var i = 0; i < earthquakes.length; i++ ){
-
-		var eq = earthquakes[i];
-
-
-		c.save();
-		c.globalAlpha = eq.opacity;
-		c.beginPath();	
-		c.arc(eq.x, eq.y, eq.magnitude, 0, 2 * Math.PI, false);
-		c.strokeStyle = eq.color;
-		c.fillStyle = eq.color;
-		c.fill();
-		c.closePath();
-		c.stroke();
-		c.restore();
-
-		handleGarbage(eq);
-
-	}
-
-	for(var i = 0; i < trash.length; i++){
-		earthquakes.splice(i, 1);
-	}
-
-}
-
-
-
+//Plot colorbar
 var colorBar = function() {
 	c.font="18px Georgia";
 	c.fillText("Depth (km)",20,15);
@@ -429,81 +148,398 @@ var colorBar = function() {
 		c.fillRect(20,20,25,barheight);
 }
 
-var initMap = function(data){
-
-	reDraw(data);
-	colorBar();
 
 
-	minMag = d3.min(data.earthquakes, function(d){
-		return d.properties.Magnitude;
+
+
+// Functions for Drawing earthquakes on Canvas
+//*****************************************************************
+
+// Filter data by given time
+var filterData = function(data,minute){
+
+	var filteredData = data.filter(function(item,index,array){
+
+		return Math.floor(item.properties.Time/60) === minute; 
+	
 	});
 
-	maxMag = d3.max(data.earthquakes, function(d){
-		return d.properties.Magnitude;
-	});
-
-	maxSec = d3.max(data.earthquakes, function(d){
-		return d.properties.Time;
-	});
-
-	minSec = d3.min(data.earthquakes, function(d){
-		return d.properties.Time;
-	});
-	
-	projection = d3.geo.mercator().scale(2000).center([140.6917,35.689506]).translate([width/2,height/2]); // center on tokyo
-
-	path = d3.geo.path().projection(projection).context(c);
-
-	//console.log(document.getElementById('r1'));
-
-
-	selector = '#mySVG';
-	plotGraphDots(filterData(data.earthquakes, minute, selector));
-	selector = '#mySVG2';
-	plotGraphDots(filterData(data.earthquakes, minute, selector));
-
-	//plotDepthvTime(filterData(data.earthquakes, minute));
-
-
-	radio1 = document.getElementById('r1');
-	radio2 = document.getElementById('r2');
-
-
-	form.onclick = function(data, minute){
-
-		if (document.getElementById('r1').checked) {
-			plotMagvTime(filterData(data.earthquakes, minute));
-			plotDepthvTime(filterData(data.earthquakes, minute));
-		}
-
-		else { 
-			//alert("Click two points on the map to define a profile, then press play!");
-			//	console.log ("Hi!");
-			window.open('http://geodesygina.com/',"_self");
-			table.onclick = function(e, data){
-   				drawUserDot(e,data);
-   				return e, data;
-			};
-		}
-	};
-
-
-
-
- 	
-	startMinute = Math.floor(minSec/60)-1;
-	minute = startMinute;
-	
-	setSlider();
-	setButton();
-	
-
-	animate(c,projection,path,data);
-
-	
+	return filteredData;
 }
 
+
+// Earthquake Circle maker -- defines color and size
+var Earthquake = function(x,y,color,magnitude,depth,minute){
+	this.x = x;
+	this.y = y;
+	this.color = color;
+	this.magnitude = magnitude;
+	this.depth = depth;
+	this.opacity = 1;
+	this.minute = minute;
+}
+
+
+// Defines earthquake color scale and its properties for the canvas map
+var updateEarthquakes = function(data){
+
+	var colorScale = d3.scale.linear();
+	colorScale.domain([0,50]);
+	colorScale.range([0,100]); // green to red (deepest)
+	colorScale.clamp(true);
+	
+	var magScale = d3.scale.log();
+	magScale.base(10);
+	magScale.domain([minMag,maxMag]);
+	magScale.range([1,30]);
+
+	for(var i = 0; i < data.length; i++){
+
+		var d = data[i].properties.Depth;
+		var m = data[i].properties.Magnitude;
+		var minute = Math.floor(data[i].properties.Time/60);
+
+		var x = projection(data[i].geometry.coordinates)[0];  //longitude
+		var y = projection(data[i].geometry.coordinates)[1];  //latitude
+	
+		var hueValue = colorScale(d);
+		var color = d3.hsl(hueValue,1,0.5);
+
+		// Define earthquake array
+		earthquakes.push(new Earthquake(x,y,color.toString(),magScale(m)*2,d,minute));  
+		
+	}
+
+
+}
+
+// This function draws earthquakes as more transparent over time on the 
+// canvas while the movie is playing.
+// If the opacity is less than -.01 than push it to the trash.  
+// 
+// If the movie is NOT playing,  and the user is changing the play 
+// time, the remove dots if the eq time does not equal the movie time. 
+
+
+var drawEarthquakes = function(){
+
+	var trash = [];
+
+	var handleGarbage = function(eq){
+
+		if(isPlaying){
+			eq.opacity = eq.opacity * 0.95;
+			eq.magnitude = eq.magnitude * 0.99;
+		
+		if(eq.opacity < 0.01){
+			trash.push(i);
+		}
+
+		}
+		else{
+			if(eq.minute !== minute){
+				trash.push(i);
+			}
+		}
+
+	}
+
+
+
+// Draw earthquakes to Canvas Map
+	for(var i = 0; i < earthquakes.length; i++ ){
+
+		var eq = earthquakes[i];
+
+
+		c.save();
+		c.globalAlpha = eq.opacity;
+		c.beginPath();	
+		c.arc(eq.x, eq.y, eq.magnitude, 0, 2 * Math.PI, false);
+		c.strokeStyle = eq.color;
+		c.fillStyle = eq.color;
+		c.fill();
+		c.closePath();
+		c.stroke();
+		c.restore();
+
+		//Calculate opacity and remove if need be
+		handleGarbage(eq);
+
+	}
+
+	for(var i = 0; i < trash.length; i++){
+		// Add earthquakes to array
+		earthquakes.splice(i, 1);
+	}
+
+}
+
+
+
+
+// Functions for Drawing earthquakes on SVG Elements
+//*****************************************************************
+
+
+// Defines color and properties of plotted data for plotting onto the SVG div elements
+var updateEarthquakesTable = function(data){
+
+	var colorScale = d3.scale.linear();
+	colorScale.domain([50,0]);
+	colorScale.range([100,0]); // green to red (deepest)
+	colorScale.clamp(true);
+	
+	var colorScale2 = d3.scale.linear();
+	colorScale2.domain([10,4]);
+	colorScale2.range([100,0]); // green to red (deepest)
+	colorScale2.clamp(true);
+
+
+	for(var i = 0; i < data.length; i++){
+
+		var d = data[i].properties.Depth;
+		var m = data[i].properties.Magnitude;
+		var minute = Math.floor(data[i].properties.Time/60);
+
+
+	
+		var hueValue = colorScale(d);
+		var color = d3.hsl(hueValue,1,0.5);
+
+		var hueValue2 = colorScale2(m);
+		var color2 = d3.hsl(hueValue2,1,0.5);
+	
+		if (state  === 0) {
+			addPoint(color,data[i],"#mySVG");
+			addPoint(color,data[i],"#mySVG2");
+		}
+		else {
+			addPoint(color2,data[i],"#mySVG");	
+		}
+	}
+
+
+}
+
+// Adds points on SVG elements
+var addPoint = function (color,data,selector) {
+
+	var svg = d3.select(selector);
+	
+	if (state === 0){
+
+
+		var minute = Math.floor(data.properties.Time/60);
+		var m = data.properties.Magnitude;
+			
+		if(selector === "#mySVG"){
+			svg.append("circle")
+				.attr("cx", xscale(minute/60))
+				.attr("cy", yscale(parseFloat(m)))
+				.attr("fill", color)
+				.attr("r",5);
+		}
+		else {
+
+			if (x2min < minute/60 && x2max > minute/60 && y2min < parseFloat(m) && y2max > parseFloat(m)) {
+				svg.append("circle")
+				.attr("cx", x2scale(minute/60))
+				.attr("cy", y2scale(parseFloat(m)))
+				.attr("fill", color)
+				.attr("r",5);	
+			}
+		}
+	}
+	else {
+
+		var depth = data.properties.Depth;
+		var longitude = data.geometry.coordinates[0];
+
+			
+		svg.append("circle")
+			.attr("cx", xscale(longitude))
+			.attr("cy", yscale(depth))
+			.attr("fill", color)
+			.attr("r",5);
+	}
+	
+		
+}
+
+// Remove points from SVG elements
+var RemovePoint = function (minute, selector) {
+	console.log(selector)
+	hour = minute/60;
+	var circles = $(selector);
+
+	if (selector === "#mySVG>circle") {
+		for(var i = 0; i < circles.length; i++){
+	
+			if (circles[i].getAttribute("cx") > xscale(hour))
+				circles[i].parentNode.removeChild(circles[i]);
+		}
+	}
+	else 
+	{
+		for(var i = 0; i < circles.length; i++){
+	
+			if (circles[i].getAttribute("cx") > x2scale(hour))
+				circles[i].parentNode.removeChild(circles[i]);
+		}
+	} 
+}
+
+
+
+// Plots axes for graphs
+var plotGraphAxes = function(data){
+
+	var plotw = 600;
+	var ploth = 300;
+
+
+	var svg = d3.select(selector)
+		.attr("width", plotw)
+		.attr("height", ploth);
+
+
+		if (state === 0){
+			if (selector === '#mySVG'){
+					xscale = d3.scale.linear().domain([0,24]).range([left_pad,plotw-top_pad]).clamp(true);
+					yscale = d3.scale.linear().domain([10,3]).range([top_pad, ploth-top_pad*2]).clamp(true);
+
+					var xAxis = d3.svg.axis().scale(xscale).orient("bottom")
+						.ticks(10);
+
+					var yAxis = d3.svg.axis().scale(yscale).orient("left");
+			}
+			else {
+			
+
+				x2scale = d3.scale.linear().domain([x2min,x2max]).range([left_pad,plotw-top_pad]).clamp(true);
+	            y2scale = d3.scale.linear().domain([y2max,y2min]).range([top_pad, ploth-top_pad*2]).clamp(true);
+
+
+	            var xAxis = d3.svg.axis().scale(x2scale).orient("bottom")
+					.ticks(10);
+
+				var yAxis = d3.svg.axis().scale(y2scale).orient("left");	
+			}
+
+			svg.append("text")
+	    		.attr("x", plotw/1.8 )
+	    		.attr("y", ploth - top_pad+15 )
+	    		.style("text-anchor","middle")
+				.text("Time referenced to UTC, March 11, 2011 (hours of day)");
+
+			svg.append("g")
+				.attr("class", "x axis")
+				.attr("transform", "translate(0, "+(ploth-2*top_pad)+")")
+				.call(xAxis);
+
+			svg.append("text")
+				.attr("transform", "rotate(-90)")
+				.attr("y", ploth/5.5)
+				.attr("x",-left_pad*1.2)
+				.attr("dy", "1em")
+				.style("text-anchor","middle")
+				.text("Magnitude");
+
+			svg.append("g")
+				.attr("class", "y axis")
+				.attr("transform", "translate("+(left_pad)+",0)")
+				.call(yAxis);
+		}
+		else{
+
+			xscale = d3.scale.linear().domain([140,146]).range([left_pad,plotw-top_pad]).clamp(true);
+			yscale = d3.scale.linear().domain([100,3]).range([top_pad, ploth-top_pad*2]).clamp(true);
+
+			var xAxis = d3.svg.axis().scale(xscale).orient("bottom")
+				.ticks(10);
+
+			var yAxis = d3.svg.axis().scale(yscale).orient("left");
+			
+			svg.append("text")
+	    		.attr("x", plotw/1.8 )
+	    		.attr("y", ploth - top_pad+15 )
+	    		.style("text-anchor","middle")
+				.text("Degrees Longitude");
+
+			svg.append("g")
+				.attr("class", "x axis")
+				.attr("transform", "translate(0, "+(ploth-2*top_pad)+")")
+				.call(xAxis);
+
+			svg.append("text")
+				.attr("transform", "rotate(-90)")
+				.attr("y", ploth/5.5)
+				.attr("x",-left_pad*1.2)
+				.attr("dy", "1em")
+				.style("text-anchor","middle")
+				.text("Depth (km)");
+
+			svg.append("g")
+				.attr("class", "y axis")
+				.attr("transform", "translate("+(left_pad)+",0)")
+				.call(yAxis);
+		}
+}
+
+
+// Removes axes and circles from SVG elements
+var cleanGraph = function(selector){
+	children = $(selector).children()
+	for(var i = 0; i < children.length; i++){
+		children[i].parentNode.removeChild(children[i]);
+	}
+}
+
+
+//Calls cleanGraph, figures out what state you are in, then plots new axes on SVG elements
+var drawGraph = function(){
+	// clean svgs
+	cleanGraph('#mySVG');
+	cleanGraph('#mySVG2'); 
+
+	if (state === 0){
+		/* if ($("#mySVG2").length === 0 ){
+
+			rsvg=$("#SVGcontainer");
+			svgContainer = rsvg[0];
+			var svg = document.createElement('svg');
+			svg.setAttribute("id","mySVG2");
+			svgContainer.appendChild(svg);
+		}*/
+		selector = '#mySVG';
+		plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
+		selector = '#mySVG2';
+		plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
+	}
+	else
+	{
+		 /*if ($("#mySVG2").length === 1 ){
+			var rsvg=$("#mySVG2");
+			console.log (rsvg);
+			rsvg[0].parentNode.removeChild(rsvg[0]);
+			} */
+		
+		selector = '#mySVG';
+		plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
+		canvas.onclick = function(e, data){
+			drawUserDot(e);
+		}
+	
+	}
+}
+
+
+// Functions for the Player
+//*****************************************************************
+
+// Set slider characteristics -- if user changes slider, stop it from playing.
+// Set the min and max values, as will has the increment
 var setSlider = function(){
 
 	slider = document.getElementById("slider");
@@ -525,6 +561,13 @@ var setSlider = function(){
 	}
 
 }
+
+
+// Figure out what the play button is doing on click
+// First define what the play button is from HTML file
+// Define play and stop 
+// If player is playing and button is clicked, then stop it
+// else make it play.
 
 var setButton = function(){
 
@@ -550,7 +593,13 @@ var setButton = function(){
 
 }
 
+
+
 var updateTime = function(){
+
+// This is a nice little formatting trick implemented by Ville.  It basically says that if either 
+// the hour or minute floor has only 1 digit, then print one way, else, print the other way into a 
+// string.  Time in the JSON file is represented in seconds of the day.
 
 	var hourString = Math.floor(minute/60) > 9 ? Math.floor(minute/60) : "0"+Math.floor(minute/60);
 	var minuteString = minute % 60 > 9 ? minute % 60 : "0"+minute % 60;
@@ -559,46 +608,6 @@ var updateTime = function(){
 
 }
 
-var animate = function(c,projection,path,data){
-
-	var tick = function(){
-
-		// don't update unless something has changed
-		
-		if(needsUpdate){
-			//console.log("hi");
-
-		c.clearRect(0,0,window.innerWidth,window.innerHeight);
-
-		drawBackground();
-		drawCountryLines(data.countries,path);
-		colorBar();
-		updateEarthquakes(filterData(data.earthquakes,minute));
-		updateEarthquakesTable(filterData(data.earthquakes,minute));
-		drawEarthquakes();
-		updateTime();
-		handlePlayhead();
-			if (endX) {
-		  		drawDot(startX,startY);
-		  		drawDot(endX,endY);
-		  		drawLine(startX,startY,endX,endY);
-		  	}
-		  	else if (startX === null) {
-
-		  	}
-		  	else {
-		  		drawDot(startX,startY);
-		  	}
-			
-		}
-
-		requestAnimationFrame(tick)
-
-	}
-
-	requestAnimationFrame(tick);
-
-}
 
 var handlePlayhead = function(){
 
@@ -616,20 +625,179 @@ var handlePlayhead = function(){
 			needsUpdate = false;
 
 		}
+}
 
+// This functions clears the canvas, redraws the background, country lines and the colorbar, 
+// then if updates the earthquakes on the map as well as on the plots.  It updates the player
+// and handles the play head.   
+var animate = function(c,projection,path,data){
+
+	var tick = function(){
+
+		// don't update unless something has changed
+		
+		if(needsUpdate){
+
+
+		c.clearRect(0,0,window.innerWidth,window.innerHeight);
+
+		drawBackground();
+		drawCountryLines(data.countries,path);
+		colorBar();
+		updateEarthquakes(filterData(data.earthquakes,minute));
+		updateEarthquakesTable(filterData(data.earthquakes,minute));
+		drawEarthquakes();
+		updateTime();
+		handlePlayhead();
+		}  
+
+// The window.requestAnimationFrame() is a method that tells the browser you wish 
+// to perform an animation and requests that the browser call a specified function 
+// to update an animation before the next repaint.
+		requestAnimationFrame(tick)
+
+	} 
+
+	requestAnimationFrame(tick);
 
 }
 
 
 
 
+// Functions for Drawing Transects
+//*****************************************************************
+
+// Draws dots for transects
+var drawDot = function (dotx,doty) {
+	//console.log(e.clientX, e.clientY);
+	c.beginPath();	
+	c.arc(dotx, doty, 10, 0, 2 * Math.PI, false);
+	c.strokeStyle = "red";
+	c.fillStyle = "red";
+	c.fill();
+	c.stroke();
+	c.restore();
+	c.closePath();
+}
+
+// Draws Transect lines
+var drawLine = function (startX,startY,endX,endY){
+		//Draw line
+		c.moveTo(startX,startY);
+		c.lineTo(endX, endY);
+		c.strokeStyle = "red";
+		c.lineWidth = 3;
+		c.stroke();
+}
+
+// Defines start and end dots of the transect line, the transect line, 
+// or cleans them up if more than two points are clicked.
+var drawUserDot = function(e, data){
+	var offset = 28;
+	if(startX === null && endX === null) {
+	//	console.log(e.clientX, e.clientY);
+	console.log(startX, startY, endX, endY);
+		startX=e.clientX;
+		startY=e.clientY-offset;
+		drawDot(startX,startY);
+
+	}
+	else if (startX !== null && endX === null) {
+		
+	// Draw 2nd Dot
+		endX=e.clientX;
+		endY=e.clientY-offset;
+		console.log(startX, startY, endX, endY);
+		drawDot(endX,endY);
+		drawLine(startX,startY,endX,endY);
+	}
+	else {
+	// Clear start and end points	
+		reDraw(dataset);
+		colorBar();
+		startX=e.clientX;
+		startY=e.clientY-offset;
+		drawDot(startX, startY);
+		endX=null;
+		endY=null;
+	}
+};
+
+
+
+// Main Function 
+//*****************************************************************
+
+
+var initMap = function(data){
+
+// Draw canvas background and country lines
+	reDraw(data);
+	colorBar();
+
+// Define some variables
+	minMag = d3.min(data.earthquakes, function(d){
+		return d.properties.Magnitude;
+	});
+
+	maxMag = d3.max(data.earthquakes, function(d){
+		return d.properties.Magnitude;
+	});
+
+	maxSec = d3.max(data.earthquakes, function(d){
+		return d.properties.Time;
+	});
+
+	minSec = d3.min(data.earthquakes, function(d){
+		return d.properties.Time;
+	});
+
+// Project geographical coordinates into canvas coordinates for a mercator projection
+	projection = d3.geo.mercator().scale(1000).center([140.6917,35.689506]).translate([width/2,(height/2)-28]); // center on tokyo
+
+// draw lines wrt projection
+	path = d3.geo.path().projection(projection).context(c);
+
+
+// Draw svg graphs
+	drawGraph();
+
+	//plotDepthvTime(filterData(data.earthquakes, minute));
+
+//Define the Radio Button function 
+	createRadioButtons();
+ 	
+
+ // Initialize the player
+	startMinute = Math.floor(minSec/60)-1;
+	minute = startMinute;
+	
+	setSlider();
+	setButton();
+	
+// Set up the animation
+	animate(c,projection,path,data);
+
+	
+}
+
+
+
+
+
+
+
+
+// On page load, load the Data 
 
 window.onload = function(){
 
-	loadMap();
+	loadData();
 
 };
 
+// Define an isReady function that returns the data
 
 var isReady = function(){
 
