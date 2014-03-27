@@ -528,7 +528,7 @@ var drawGraph = function(){
 		selector = '#mySVG';
 		plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
 		canvas.onclick = function(e, data){
-			drawUserDot(e);
+			drawUserDot(e,data);
 		}
 	
 	}
@@ -639,16 +639,22 @@ var animate = function(c,projection,path,data){
 		if(needsUpdate){
 
 
-		c.clearRect(0,0,window.innerWidth,window.innerHeight);
+			c.clearRect(0,0,window.innerWidth,window.innerHeight);
 
-		drawBackground();
-		drawCountryLines(data.countries,path);
-		colorBar();
-		updateEarthquakes(filterData(data.earthquakes,minute));
-		updateEarthquakesTable(filterData(data.earthquakes,minute));
-		drawEarthquakes();
-		updateTime();
-		handlePlayhead();
+			drawBackground();
+			drawCountryLines(data.countries,path);
+			colorBar();
+			updateEarthquakes(filterData(data.earthquakes,minute));
+			updateEarthquakesTable(filterData(data.earthquakes,minute));
+			drawEarthquakes();
+			updateTime();
+			handlePlayhead();
+
+			if (endX){
+				drawDot(startX,startY);
+				drawDot(endX,endY);
+				drawLine(startX,startY,endX,endY);
+			}
 		}  
 
 // The window.requestAnimationFrame() is a method that tells the browser you wish 
@@ -691,10 +697,33 @@ var drawLine = function (startX,startY,endX,endY){
 		c.stroke();
 }
 
+// This function figures out are within the width value supplied by the user
+var extractDots = function(startX,startY,endX,endY,data, minute){
+	//startX, startY, endX, endY are user defined start and end points of the profile line
+	// extracted from drawUserDot
+
+	// Bring in width defined by user
+	var prof_width = document.getElementById("prof_width").value;
+
+	// Now go through earthquakes and see which ones will be played
+	for(var i = 0; i < dataset.earthquakes.length; i++){
+
+
+		//var dataLon = projection(filterData(dataset.earthquakes[i].geometry.coordinates),minute);  //data longitude on canvas
+		//var dataLat = projection(filterData(dataset.earthquakes[i].geometry.coordinates),minute);  //data latitude on canvas
+		//console.log(startX, startY, endX, endY, dataLon, dataLat);
+	}
+	// Define the 
+
+
+}
+
+
 // Defines start and end dots of the transect line, the transect line, 
 // or cleans them up if more than two points are clicked.
-var drawUserDot = function(e, data){
+var drawUserDot = function(e){
 	var offset = 28;
+
 	if(startX === null && endX === null) {
 	//	console.log(e.clientX, e.clientY);
 	console.log(startX, startY, endX, endY);
@@ -708,9 +737,10 @@ var drawUserDot = function(e, data){
 	// Draw 2nd Dot
 		endX=e.clientX;
 		endY=e.clientY-offset;
-		console.log(startX, startY, endX, endY);
+		//console.log(startX, startY, endX, endY);
 		drawDot(endX,endY);
 		drawLine(startX,startY,endX,endY);
+		extractDots(startX,startY,endX,endY);
 	}
 	else {
 	// Clear start and end points	
@@ -791,11 +821,7 @@ var initMap = function(data){
 
 // On page load, load the Data 
 
-window.onload = function(){
-
-	loadData();
-
-};
+window.onload = loadData;
 
 // Define an isReady function that returns the data
 
