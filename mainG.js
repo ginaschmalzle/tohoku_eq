@@ -206,8 +206,10 @@ var updateEarthquakes = function(data){
 		var color = d3.hsl(hueValue,1,0.5);
 
 		// Define earthquake array
-		earthquakes.push(new Earthquake(x,y,color.toString(),magScale(m)*2,d,minute));  
-		
+
+
+			earthquakes.push(new Earthquake(x,y,color.toString(),magScale(m)*2,d,minute));  
+
 	}
 
 
@@ -315,7 +317,7 @@ var updateEarthquakesTable = function(data){
 			addPoint(color,data[i],"#mySVG2");
 		}
 		else {
-			addPoint(color2,data[i],"#mySVG");	
+			addPoint(color,data[i],"#mySVG");	
 		}
 	}
 
@@ -354,7 +356,7 @@ var addPoint = function (color,data,selector) {
 	else {
 
 		var depth = data.properties.Depth;
-		var longitude = data.geometry.coordinates[0];
+		var longitude = alpha*111;
 
 			
 		svg.append("circle")
@@ -369,7 +371,7 @@ var addPoint = function (color,data,selector) {
 
 // Remove points from SVG elements
 var RemovePoint = function (minute, selector) {
-	console.log(selector)
+//	console.log(selector)
 	hour = minute/60;
 	var circles = $(selector);
 
@@ -393,7 +395,7 @@ var RemovePoint = function (minute, selector) {
 
 
 // Plots axes for graphs
-var plotGraphAxes = function(data){
+var plotGraphAxes = function(data, endMag){
 
 	var plotw = 600;
 	var ploth = 300;
@@ -415,7 +417,7 @@ var plotGraphAxes = function(data){
 					var yAxis = d3.svg.axis().scale(yscale).orient("left");
 			}
 			else {
-			
+
 
 				x2scale = d3.scale.linear().domain([x2min,x2max]).range([left_pad,plotw-top_pad]).clamp(true);
 	            y2scale = d3.scale.linear().domain([y2max,y2min]).range([top_pad, ploth-top_pad*2]).clamp(true);
@@ -453,7 +455,11 @@ var plotGraphAxes = function(data){
 		}
 		else{
 
-			xscale = d3.scale.linear().domain([140,146]).range([left_pad,plotw-top_pad]).clamp(true);
+			startcoord = projection.invert([startX,startY]);
+			endcoord = projection.invert([endX,endY]);
+			endMag = Math.sqrt(((endcoord[1]-startcoord[1])*(endcoord[1]-startcoord[1])) + ((endcoord[0]-startcoord[0])*(endcoord[0]-startcoord[0])) )
+			//console.log (startX, startY, endX, endY, startcoord, endcoord, endMag);
+			xscale = d3.scale.linear().domain([0,endMag*111]).range([left_pad,plotw-top_pad]).clamp(true);
 			yscale = d3.scale.linear().domain([100,3]).range([top_pad, ploth-top_pad*2]).clamp(true);
 
 			var xAxis = d3.svg.axis().scale(xscale).orient("bottom")
@@ -526,7 +532,7 @@ var drawGraph = function(){
 			} */
 		
 		selector = '#mySVG';
-		plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
+	//	plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
 		canvas.onclick = function(e, data){
 			drawUserDot(e,data);
 		}
@@ -644,17 +650,24 @@ var animate = function(c,projection,path,data){
 			drawBackground();
 			drawCountryLines(data.countries,path);
 			colorBar();
-			updateEarthquakes(filterData(data.earthquakes,minute));
-			updateEarthquakesTable(filterData(data.earthquakes,minute));
-			drawEarthquakes();
-			updateTime();
-			handlePlayhead();
+
+			if (state === 0){
+				updateEarthquakes(filterData(data.earthquakes,minute));
+				console.log("hi",filterData(data.earthquakes,minute));
+				updateEarthquakesTable(filterData(data.earthquakes,minute));
+			}
+
 
 			if (endX){
 				drawDot(startX,startY);
 				drawDot(endX,endY);
 				drawLine(startX,startY,endX,endY);
+				extractDots(startX,startY,endX,endY,filterData(data.earthquakes, minute));
+
 			}
+			drawEarthquakes();
+			updateTime();
+			handlePlayhead();
 		}  
 
 // The window.requestAnimationFrame() is a method that tells the browser you wish 
@@ -677,6 +690,7 @@ var animate = function(c,projection,path,data){
 // Draws dots for transects
 var drawDot = function (dotx,doty) {
 	//console.log(e.clientX, e.clientY);
+
 	c.beginPath();	
 	c.arc(dotx, doty, 10, 0, 2 * Math.PI, false);
 	c.strokeStyle = "red";
@@ -699,21 +713,44 @@ var drawLine = function (startX,startY,endX,endY){
 
 // This function figures out are within the width value supplied by the user
 var extractDots = function(startX,startY,endX,endY,data, minute){
-	//startX, startY, endX, endY are user defined start and end points of the profile line
-	// extracted from drawUserDot
 
-	// Bring in width defined by user
+
 	var prof_width = document.getElementById("prof_width").value;
 
-	// Now go through earthquakes and see which ones will be played
-	for(var i = 0; i < dataset.earthquakes.length; i++){
+	for(var i = 0; i < data.length; i++){
+
+		dataX = data[i].geometry.coordinates[0];
+		dataY = data[i].geometry.coordinates[1];
+		minute = parseInt(data[i].properties.Time)/60
+		pdataX = projection(data[i].geometry.coordinates)[0];
+		pdataY = projection(data[i].geometry.coordinates)[1];
 
 
-		//var dataLon = projection(filterData(dataset.earthquakes[i].geometry.coordinates),minute);  //data longitude on canvas
-		//var dataLat = projection(filterData(dataset.earthquakes[i].geometry.coordinates),minute);  //data latitude on canvas
-		//console.log(startX, startY, endX, endY, dataLon, dataLat);
+
+		theta = Math.atan((endcoord[1]-startcoord[1])/(endcoord[0]-startcoord[0]));
+		phi = Math.atan((dataY-startcoord[1])/(dataX-startcoord[0]));
+		fork = phi - theta; 
+
+		Rmag = Math.sqrt(((dataY-startcoord[1])*(dataY-startcoord[1])) + ((dataX-startcoord[0]) * (dataX-startcoord[0])));
+		dline = (Math.abs(Rmag * Math.sin(fork)))*111; 
+		alpha = Rmag*Math.cos(fork);
+
+		gamma = (90*(3.14159/180)) - theta;
+		dpy = dline * Math.sin (gamma);
+		dpx = dline * Math.cos (gamma);
+		px = (dataX + dpx);
+		py = (dataY + dpy);
+
+
+		if (dline < prof_width){
+		//  console.log(data, minute);
+			updateEarthquakesTable(data, minute, endMag);
+			updateEarthquakes(data,minute);
+		}
+
+
+
 	}
-	// Define the 
 
 
 }
@@ -726,7 +763,7 @@ var drawUserDot = function(e){
 
 	if(startX === null && endX === null) {
 	//	console.log(e.clientX, e.clientY);
-	console.log(startX, startY, endX, endY);
+
 		startX=e.clientX;
 		startY=e.clientY-offset;
 		drawDot(startX,startY);
@@ -737,10 +774,15 @@ var drawUserDot = function(e){
 	// Draw 2nd Dot
 		endX=e.clientX;
 		endY=e.clientY-offset;
+
 		//console.log(startX, startY, endX, endY);
 		drawDot(endX,endY);
 		drawLine(startX,startY,endX,endY);
-		extractDots(startX,startY,endX,endY);
+		startcoord = projection.invert([startX,startY]);
+		endcoord = projection.invert([endX,endY]);
+		endMag = Math.sqrt(((endcoord[1]-startcoord[1])*(endcoord[1]-startcoord[1])) + ((endcoord[0]-startcoord[0])*(endcoord[0]-startcoord[0])) )
+		plotGraphAxes(filterData(dataset.earthquakes, minute, selector, endMag));
+		//extractDots(startX,startY,endX,endY,dataset.earthquakes,minute);
 	}
 	else {
 	// Clear start and end points	
