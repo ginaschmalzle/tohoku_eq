@@ -7,8 +7,8 @@ var isPlaying = false;
 var earthquakes = [];
 var width,height,canvas,c;
 var needsUpdate = false;
-//var startX=null;
-//var startY=null;
+var startX=null;
+var startY=null;
 var endX=null;
 var endY=null;
 
@@ -36,45 +36,49 @@ var state = 0;
 // other
 
 var createRadioButtons = function(data){
+	console.log(data)
 	radio1 = document.getElementById('r1');
 	radio2 = document.getElementById('r2');
 
-	//console.log(dataset);
-	radio1.onclick = function(e){
+
+	radio1.onclick = function(e, data, minute){
 
 		if (document.getElementById('r1').checked) {
 
 			state = 0;
-	//		reDraw();
-	//		colorBar();
+			console.log("r1");
+			cleanGraph('#mySVG');
+			cleanGraph('#mySVG2'); 
 		}
 		else {
 			state = 1;
 		}
-		reDraw(data);
-		colorBar();
-		drawGraph(data);
+
+	//	drawGraph(data);
 	//	resetSlider();
 	};
 
-	radio2.onclick = function(e){
-		startX = null;
-		startY = null;
+	radio2.onclick = function(e, data, minute){
+
 		if (document.getElementById('r2').checked) {
 			state = 1;
-			alert("To use this feature choose two points on the map to define your profile, choose your profile width, which will plot earthquakes within that distance of the profile line.  Then press play!")
+			//reDraw();
+			//colorBar();
+			alert("Please select two dots to define your profile, and define the width you would like to see plotted.  Then press play!")
+			cleanGraph('#mySVG');
+			cleanGraph('#mySVG2'); 
 		}
 		else {
 			state = 0;
-			reDraw();
-			colorBar();
 		}
-		reDraw(data);
-		colorBar();
-		drawGraph(data);
+
+		
 	//	resetSlider();
 	};
 
+	reDraw(data);
+	colorBar();
+	drawGraph(data);
 }
 
 
@@ -183,7 +187,7 @@ var drawBackground = function() {
 // Draws country lines
 var drawCountryLines = function(countries,path){
   	c.beginPath();
-  	//console.log(countries);
+  //	console.log(countries);
     path(topojson.mesh(countries, countries.objects.japan));
   	c.strokeStyle = 'rgba(0,0,0,0.6)';	
 	c.fillStyle = 'rgba(10,20,30,1)';
@@ -779,7 +783,7 @@ var animate = function(c,projection,path,data){
 
 // Draws dots for transects
 var drawDot = function (dotx,doty) {
-	console.log(dotx, doty);
+	//console.log(e.clientX, e.clientY);
 
 	c.beginPath();	
 	c.arc(dotx, doty, 10, 0, 2 * Math.PI, false);
@@ -849,8 +853,6 @@ var extractDots = function(startX,startY,endX,endY,data, minute){
 // Defines start and end dots of the transect line, the transect line, 
 // or cleans them up if more than two points are clicked.
 var drawUserDot = function(e, data){
-	console.log('hi');
-	console.log(e);
 	var offset = 28;
 	//console.log (data);
 	if(startX === null && endX === null) {
@@ -881,13 +883,11 @@ var drawUserDot = function(e, data){
 	}
 	else {
 	// Clear start and end points	
-		cleanGraph('#mySVG');
-		reDraw(data);
+		reDraw(dataset);
 		colorBar();
 		startX=e.clientX;
 		startY=e.clientY-offset;
 		drawDot(startX, startY);
-
 		endX=null;
 		endY=null;
 	}
@@ -933,7 +933,7 @@ var initMap = function(data){
 	drawGraph(data);
 
 	canvas.onclick = function(e){
-		//console.log(e, data);
+		//console.log(data);
 		if (state === 1) { 
 
 			drawUserDot(e, data);

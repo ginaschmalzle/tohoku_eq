@@ -7,8 +7,8 @@ var isPlaying = false;
 var earthquakes = [];
 var width,height,canvas,c;
 var needsUpdate = false;
-//var startX=null;
-//var startY=null;
+var startX=null;
+var startY=null;
 var endX=null;
 var endY=null;
 
@@ -35,58 +35,21 @@ var state = 0;
 // are displayed depending on if you choose one radio button or the
 // other
 
-var createRadioButtons = function(data){
+var createRadioButtons = function(){
 	radio1 = document.getElementById('r1');
 	radio2 = document.getElementById('r2');
 
-	//console.log(dataset);
-	radio1.onclick = function(e){
+
+	form.onclick = function(data, minute){
 
 		if (document.getElementById('r1').checked) {
-
 			state = 0;
-	//		reDraw();
-	//		colorBar();
 		}
 		else {
 			state = 1;
 		}
-		reDraw(data);
-		colorBar();
-		drawGraph(data);
-	//	resetSlider();
-	};
 
-	radio2.onclick = function(e){
-		startX = null;
-		startY = null;
-		if (document.getElementById('r2').checked) {
-			state = 1;
-			alert("To use this feature choose two points on the map to define your profile, choose your profile width, which will plot earthquakes within that distance of the profile line.  Then press play!")
-		}
-		else {
-			state = 0;
-			reDraw();
-			colorBar();
-		}
-		reDraw(data);
-		colorBar();
-		drawGraph(data);
-	//	resetSlider();
-	};
-
-}
-
-
-var createWidth = function(data){
-	prof_width = document.getElementById('prof_width');
-	//console.log("in CreateWidth");
-
-	prof_width.onchange = function(data, minute){
-		resetSlider();
-		drawGraph(data);
-		plotGraphAxes(filterData(data.earthquakes, minute, selector));
-		//console.log("in CreateWidth onchange");
+		drawGraph();
 	};
 }
 
@@ -98,11 +61,10 @@ var createWidth = function(data){
 
 
 // Load in Data Sets
-// Old way
 
-/* var loadData = function () {
+var loadData = function () {
 	d3.json("topojapan.json",function(data){
-		
+
 		dataset.countries = data;
 		if(isReady()) initMap(dataset);
 
@@ -116,40 +78,12 @@ var createWidth = function(data){
 
 	});
 
-}  */
-
-
-var loadData = function(fn, items, callback) {
-
-  var itemResults = [];  
-
-  var runFn = function(fn, item) {
-  	fn(item, function(itemResult) {   //fn in this case is d3.json; item is file name, itemResult is the content.
-  		done([item, itemResult]);  
-  		//console.log ([item, itemResult]);  
-  	});
-  };
-
-
-  var done = function(itemResult) {
-    itemResults.push(itemResult);     /// itemResult is [ "file.json", "Obj"] where Obj is the contents
-    //console.log(itemResult);         
-    if (itemResults.length === items.length) {  // this if statement ensures that the callback only happens when the browser read the entire file
-      callback(itemResults);   // callback is a function that is called when load data is called.
-    }
-  };
-  
-  for (var i = 0; i < items.length; i++) {    /// This is the meat of the program that calls runFn which calls done
-    runFn(fn, items[i]);
-  }
-};
-
-
+}
 
 
 //This function draws and redraws the canvas map with background and country lines
 var reDraw = function (data,path) {
-	//console.log ("reDraw");
+
 	//width = window.innerWidth;
 	width = (window.innerWidth)/3;
 	height = window.innerHeight;
@@ -181,10 +115,9 @@ var drawBackground = function() {
 }
 
 // Draws country lines
-var drawCountryLines = function(countries,path){
+var drawCountryLines = function(data,path){
   	c.beginPath();
-  	//console.log(countries);
-    path(topojson.mesh(countries, countries.objects.japan));
+    path(topojson.mesh(data, data.objects.japan));
   	c.strokeStyle = 'rgba(0,0,0,0.6)';	
 	c.fillStyle = 'rgba(10,20,30,1)';
 	c.fill();
@@ -223,13 +156,12 @@ var colorBar = function() {
 //*****************************************************************
 
 // Filter data by given time
-
-var filterData = function(data, minute){
+var filterData = function(data,minute){
 
 	var filteredData = data.filter(function(item,index,array){
 
 		return Math.floor(item.properties.Time/60) === minute; 
-	
+
 	});
 
 	return filteredData;
@@ -255,7 +187,7 @@ var updateEarthquakes = function(data){
 	colorScale.domain([0,50]);
 	colorScale.range([0,100]); // green to red (deepest)
 	colorScale.clamp(true);
-	
+
 	var magScale = d3.scale.log();
 	magScale.base(10);
 	magScale.domain([minMag,maxMag]);
@@ -269,7 +201,7 @@ var updateEarthquakes = function(data){
 
 		var x = projection(data[i].geometry.coordinates)[0];  //longitude
 		var y = projection(data[i].geometry.coordinates)[1];  //latitude
-	
+
 		var hueValue = colorScale(d);
 		var color = d3.hsl(hueValue,1,0.5);
 
@@ -300,7 +232,7 @@ var drawEarthquakes = function(){
 		if(isPlaying){
 			eq.opacity = eq.opacity * 0.95;
 			eq.magnitude = eq.magnitude * 0.99;
-		
+
 		if(eq.opacity < 0.01){
 			trash.push(i);
 		}
@@ -359,7 +291,7 @@ var updateEarthquakesTable = function(data){
 	colorScale.domain([50,0]);
 	colorScale.range([100,0]); // green to red (deepest)
 	colorScale.clamp(true);
-	
+
 	var colorScale2 = d3.scale.linear();
 	colorScale2.domain([10,4]);
 	colorScale2.range([100,0]); // green to red (deepest)
@@ -373,13 +305,13 @@ var updateEarthquakesTable = function(data){
 		var minute = Math.floor(data[i].properties.Time/60);
 
 
-	
+
 		var hueValue = colorScale(d);
 		var color = d3.hsl(hueValue,1,0.5);
 
 		var hueValue2 = colorScale2(m);
 		var color2 = d3.hsl(hueValue2,1,0.5);
-	
+
 		if (state  === 0) {
 			addPoint(color,data[i],"#mySVG");
 			addPoint(color,data[i],"#mySVG2");
@@ -396,13 +328,13 @@ var updateEarthquakesTable = function(data){
 var addPoint = function (color,data,selector) {
 
 	var svg = d3.select(selector);
-	
+
 	if (state === 0){
 
 
 		var minute = Math.floor(data.properties.Time/60);
 		var m = data.properties.Magnitude;
-			
+
 		if(selector === "#mySVG"){
 			svg.append("circle")
 				.attr("cx", xscale(minute/60))
@@ -426,15 +358,15 @@ var addPoint = function (color,data,selector) {
 		var depth = data.properties.Depth;
 		var longitude = alpha*111;
 
-			
+
 		svg.append("circle")
 			.attr("cx", xscale(longitude))
 			.attr("cy", yscale(depth))
 			.attr("fill", color)
 			.attr("r",5);
 	}
-	
-		
+
+
 }
 
 // Remove points from SVG elements
@@ -445,7 +377,7 @@ var RemovePoint = function (minute, selector) {
 
 	if (selector === "#mySVG>circle") {
 		for(var i = 0; i < circles.length; i++){
-	
+
 			if (circles[i].getAttribute("cx") > xscale(hour))
 				circles[i].parentNode.removeChild(circles[i]);
 		}
@@ -453,7 +385,7 @@ var RemovePoint = function (minute, selector) {
 	else 
 	{
 		for(var i = 0; i < circles.length; i++){
-	
+
 			if (circles[i].getAttribute("cx") > x2scale(hour))
 				circles[i].parentNode.removeChild(circles[i]);
 		}
@@ -534,7 +466,7 @@ var plotGraphAxes = function(data, endMag){
 				.ticks(10);
 
 			var yAxis = d3.svg.axis().scale(yscale).orient("left");
-			
+
 			svg.append("text")
 	    		.attr("x", plotw/1.8 )
 	    		.attr("y", ploth - top_pad+15 )
@@ -572,7 +504,7 @@ var cleanGraph = function(selector){
 
 
 //Calls cleanGraph, figures out what state you are in, then plots new axes on SVG elements
-var drawGraph = function(data){
+var drawGraph = function(){
 	// clean svgs
 	cleanGraph('#mySVG');
 	cleanGraph('#mySVG2'); 
@@ -587,9 +519,9 @@ var drawGraph = function(data){
 			svgContainer.appendChild(svg);
 		}*/
 		selector = '#mySVG';
-		plotGraphAxes(filterData(data.earthquakes, minute, selector));
+		plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
 		selector = '#mySVG2';
-		plotGraphAxes(filterData(data.earthquakes, minute, selector));
+		plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
 	}
 	else
 	{
@@ -598,11 +530,13 @@ var drawGraph = function(data){
 			console.log (rsvg);
 			rsvg[0].parentNode.removeChild(rsvg[0]);
 			} */
-		
-		selector = '#mySVG';
-		//plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
 
-	
+		selector = '#mySVG';
+	//	plotGraphAxes(filterData(dataset.earthquakes, minute, selector));
+		canvas.onclick = function(e, data){
+			drawUserDot(e,data);
+		}
+
 	}
 }
 
@@ -619,7 +553,7 @@ var setSlider = function(){
 	slider.setAttribute("min",Math.floor(minSec/60));
 	slider.setAttribute("max",Math.floor(maxSec/60));
 	slider.setAttribute("value",Math.floor(minSec/60));
-	
+
 	slider.onchange = function(){
 		//console.log("hi");
 		isPlaying = false;
@@ -635,29 +569,6 @@ var setSlider = function(){
 }
 
 
-var resetSlider = function(){
-
-	slider = document.getElementById("slider");
-
-	slider.setAttribute("min",Math.floor(minSec/60));
-	slider.setAttribute("max",Math.floor(maxSec/60));
-	slider.setAttribute("value",Math.floor(minSec/60));
-	
-	slider.value = 0;
-	//console.log("hi");
-	isPlaying = false;
-	needsUpdate = false;
-	minute = 0;
-
-	selector = "#mySVG>circle";
-	RemovePoint(minute, selector);
-
-	
-
-}
-
-
-
 // Figure out what the play button is doing on click
 // First define what the play button is from HTML file
 // Define play and stop 
@@ -671,7 +582,7 @@ var setButton = function(){
 	playbtn.onclick = function(){
 
 		minute = parseInt(slider.value);
-		
+
 		var play = function(){
 			isPlaying = true;
 			needsUpdate = true;
@@ -730,25 +641,24 @@ var animate = function(c,projection,path,data){
 	var tick = function(){
 
 		// don't update unless something has changed
-		
+
 		if(needsUpdate){
 
 
 			c.clearRect(0,0,window.innerWidth,window.innerHeight);
 
 			drawBackground();
-			//console.log(data.countries);
 			drawCountryLines(data.countries,path);
 			colorBar();
 
 			if (state === 0){
 				updateEarthquakes(filterData(data.earthquakes,minute));
-				//console.log("hi",filterData(data.earthquakes,minute));
+				console.log("hi",filterData(data.earthquakes,minute));
 				updateEarthquakesTable(filterData(data.earthquakes,minute));
 			}
 
 
-			else if (endX){
+			if (endX){
 				drawDot(startX,startY);
 				drawDot(endX,endY);
 				drawLine(startX,startY,endX,endY);
@@ -779,7 +689,7 @@ var animate = function(c,projection,path,data){
 
 // Draws dots for transects
 var drawDot = function (dotx,doty) {
-	console.log(dotx, doty);
+	//console.log(e.clientX, e.clientY);
 
 	c.beginPath();	
 	c.arc(dotx, doty, 10, 0, 2 * Math.PI, false);
@@ -848,23 +758,19 @@ var extractDots = function(startX,startY,endX,endY,data, minute){
 
 // Defines start and end dots of the transect line, the transect line, 
 // or cleans them up if more than two points are clicked.
-var drawUserDot = function(e, data){
-	console.log('hi');
-	console.log(e);
+var drawUserDot = function(e){
 	var offset = 28;
-	//console.log (data);
+
 	if(startX === null && endX === null) {
 	//	console.log(e.clientX, e.clientY);
 
 		startX=e.clientX;
 		startY=e.clientY-offset;
-		//console.log("First Dot", startX, startY);	
 		drawDot(startX,startY);
-
 
 	}
 	else if (startX !== null && endX === null) {
-		
+
 	// Draw 2nd Dot
 		endX=e.clientX;
 		endY=e.clientY-offset;
@@ -875,19 +781,16 @@ var drawUserDot = function(e, data){
 		startcoord = projection.invert([startX,startY]);
 		endcoord = projection.invert([endX,endY]);
 		endMag = Math.sqrt(((endcoord[1]-startcoord[1])*(endcoord[1]-startcoord[1])) + ((endcoord[0]-startcoord[0])*(endcoord[0]-startcoord[0])) )
-		plotGraphAxes(filterData(data.earthquakes, minute, selector));
-		//plotGraphAxes(filterData(data.earthquakes, minute, selector, endMag));
+		plotGraphAxes(filterData(dataset.earthquakes, minute, selector, endMag));
 		//extractDots(startX,startY,endX,endY,dataset.earthquakes,minute);
 	}
 	else {
 	// Clear start and end points	
-		cleanGraph('#mySVG');
-		reDraw(data);
+		reDraw(dataset);
 		colorBar();
 		startX=e.clientX;
 		startY=e.clientY-offset;
 		drawDot(startX, startY);
-
 		endX=null;
 		endY=null;
 	}
@@ -900,7 +803,7 @@ var drawUserDot = function(e, data){
 
 
 var initMap = function(data){
-	//console.log(data);
+
 // Draw canvas background and country lines
 	reDraw(data);
 	colorBar();
@@ -930,76 +833,37 @@ var initMap = function(data){
 
 
 // Draw svg graphs
-	drawGraph(data);
-
-	canvas.onclick = function(e){
-		//console.log(e, data);
-		if (state === 1) { 
-
-			drawUserDot(e, data);
-
-		}
-	}
+	drawGraph();
 
 	//plotDepthvTime(filterData(data.earthquakes, minute));
 
 //Define the Radio Button function 
-	createRadioButtons(data);
-	createWidth(data); 	
-
-
+	createRadioButtons();
+ 	
 
  // Initialize the player
 	startMinute = Math.floor(minSec/60)-1;
 	minute = startMinute;
-	
+
 	setSlider();
 	setButton();
-	
+
 // Set up the animation
-	//console.log(data);
 	animate(c,projection,path,data);
 
-	
+
 }
 
 
 
 
 
-var keys = function (dataset) {
-	var keys = [];
-	for (var i in dataset) {
-		keys.push(i); 
-	}
 
-	return keys;
-};
 
 
 // On page load, load the Data 
 
-window.onload = function () {
-	var humanDataNames = {
-		'tohoku.json': 'earthquakes',
-		'topojapan.json': 'countries'
-	};
-	//console.log (dataset['tohoku.json']);
-	var files = keys(humanDataNames);  /// keys(dataset)  == ["tohoku.json", "topojapan.json"] 
-
-	loadData(d3.json, files, function (resultDataset) {      //resultDataset is an array of arrays where the first is the json file name, and the second is the data for both json files
-		// console.log (resultDataset);
-		var dataset = {};   /// Initialize new object 
-		for (var i = 0; i < resultDataset.length; i++) {   //resultDataset is an array
-			//console.log (resultDataset[i][0]);
-			var humanDataName = humanDataNames[resultDataset[i][0]];   // call the value of the key value pair and name it humanDataName, so humanDataName = earthquakes or countries
-			dataset[humanDataName] = resultDataset[i][1];  // assign humanDataName to the dataset
-		}
-	//	console.log(dataset);
-		initMap(dataset);    // datset is noe an object where {earthquakes: Array, countries: object}
-	});
-};
-
+window.onload = loadData;
 
 // Define an isReady function that returns the data
 
@@ -1007,3 +871,4 @@ var isReady = function(){
 
 	return dataset.countries && dataset.earthquakes;
 }
+
