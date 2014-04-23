@@ -1,5 +1,5 @@
-tohoku_eq
-=========
+Movie of the 2011 Tohoku Earthquake and its aftershocks
+========================================================
 
 Tohoku Earthquake movie
 
